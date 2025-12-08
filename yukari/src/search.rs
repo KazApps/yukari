@@ -404,6 +404,17 @@ impl Thread {
         for (movecount, (m, _)) in moves.iter().enumerate() {
             self.nodes += 1;
 
+            // Late Move Pruning
+            let lmp_threshold = 5 + depth.pow(2);
+            if !self.board[ply].in_check()
+                && !m.is_capture()
+                && depth == 1
+                && movecount >= lmp_threshold as usize
+                && best > -MATE_VALUE + 500
+            {
+                continue;
+            }
+
             self.prefetch_tt(tt, &self.board[ply], *m);
 
             self.path.push(Some((self.board[ply].piece_from_square(m.from).unwrap(), *m)));
