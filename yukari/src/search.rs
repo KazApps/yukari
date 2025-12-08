@@ -411,6 +411,7 @@ impl Thread {
                 && depth == 1
                 && movecount >= lmp_threshold as usize
                 && best > -MATE_VALUE + 500
+                && !expected_pvnode
             {
                 continue;
             }
