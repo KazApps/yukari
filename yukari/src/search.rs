@@ -143,14 +143,14 @@ struct Thread {
 }
 
 impl Thread {
-    fn eval(&self, ply: usize) -> i32 {
+    fn eval(&self, ply: usize) -> (i32, i32) {
         const CORRHIST_GRAIN: i32 = 256;
 
         let eval = self.board[ply].eval(self.board[ply].side());
 
         let entry_p = self.corrhist_p[self.board[ply].side() as usize][self.board[ply].hash_pawns() as usize & 16383];
         let corrhist = entry_p / CORRHIST_GRAIN;
-        (eval + corrhist).clamp(-MATE_VALUE + 1, MATE_VALUE - 1)
+        ((eval + corrhist).clamp(-MATE_VALUE + 1, MATE_VALUE - 1), corrhist)
     }
 
     pub fn quiesce(&mut self, mut alpha: i32, beta: i32, ply: usize, tt: &[TtEntry]) -> i32 {
@@ -164,7 +164,7 @@ impl Thread {
 
         self.seldepth = self.seldepth.max(ply);
 
-        let mut best = self.eval(ply);
+        let (mut best, _corr) = self.eval(ply);
         if best >= beta {
             return best;
         }
@@ -383,7 +383,7 @@ impl Thread {
             }
         }
 
-        let eval = self.eval(ply);
+        let (eval, corr) = self.eval(ply);
         let rfp_margin = 45 * depth;
         if !self.board[ply].in_check() && depth <= 8 && eval - rfp_margin >= beta {
             return eval - rfp_margin;
@@ -407,7 +407,7 @@ impl Thread {
             _ => (false, false, 0.0, 0.0, 0.0, 0),
         };
         if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta {
-            let bound = ((beta as f32 + sigma - b) / a).round() as i32;
+            let bound = ((beta as f32 + sigma + corr.abs() as f32 - b) / a).round() as i32;
             let score = self.search(s, bound - 1, bound, ply, tt);
             if score >= bound {
                 return beta;
@@ -415,7 +415,7 @@ impl Thread {
         }
 
         if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha {
-            let bound = ((alpha as f32 - sigma - b) / a).round() as i32;
+            let bound = ((alpha as f32 - sigma - corr.abs() as f32 - b) / a).round() as i32;
             let score = self.search(s, bound, bound + 1, ply, tt);
             if score <= bound {
                 return alpha;
