@@ -384,6 +384,21 @@ impl Thread {
         }
 
         let eval = self.eval(ply);
+
+        let tt_complexity = if let Some(entry) = tt_entry {
+            let score = i32::from(entry.score);
+
+            if entry.flags == TtFlags::Exact
+                || (entry.flags == TtFlags::Upper && score <= eval)
+                || (entry.flags == TtFlags::Lower && score >= eval) {
+                (eval - score).abs()
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+
         let rfp_margin = 45 * depth;
         if !self.board[ply].in_check() && depth <= 8 && eval - rfp_margin >= beta {
             return eval - rfp_margin;
@@ -406,7 +421,7 @@ impl Thread {
             //8 => (true, 1.0417771,   1.3685266,  94.86876, 4),
             _ => (false, false, 0.0, 0.0, 0.0, 0),
         };
-        if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta {
+        if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta && tt_complexity <= 200 {
             let bound = ((beta as f32 + sigma - b) / a).round() as i32;
             let score = self.search(s, bound - 1, bound, ply, tt);
             if score >= bound {
@@ -414,7 +429,7 @@ impl Thread {
             }
         }
 
-        if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha {
+        if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha && tt_complexity <= 200 {
             let bound = ((alpha as f32 - sigma - b) / a).round() as i32;
             let score = self.search(s, bound, bound + 1, ply, tt);
             if score <= bound {
