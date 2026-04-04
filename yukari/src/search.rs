@@ -143,14 +143,14 @@ struct Thread {
 }
 
 impl Thread {
-    fn eval(&self, ply: usize) -> i32 {
+    fn eval(&self, ply: usize) -> (i32, i32) {
         const CORRHIST_GRAIN: i32 = 256;
 
         let eval = self.board[ply].eval(self.board[ply].side());
 
         let entry_p = self.corrhist_p[self.board[ply].side() as usize][self.board[ply].hash_pawns() as usize & 16383];
         let corrhist = entry_p / CORRHIST_GRAIN;
-        (eval + corrhist).clamp(-MATE_VALUE + 1, MATE_VALUE - 1)
+        ((eval + corrhist).clamp(-MATE_VALUE + 1, MATE_VALUE - 1), corrhist)
     }
 
     pub fn quiesce(&mut self, mut alpha: i32, beta: i32, ply: usize, tt: &[TtEntry]) -> i32 {
@@ -164,7 +164,7 @@ impl Thread {
 
         self.seldepth = self.seldepth.max(ply);
 
-        let mut best = self.eval(ply);
+        let (mut best, _corr) = self.eval(ply);
         if best >= beta {
             return best;
         }
@@ -383,7 +383,7 @@ impl Thread {
             }
         }
 
-        let eval = self.eval(ply);
+        let (eval, corr) = self.eval(ply);
         let rfp_margin = 45 * depth;
         if !self.board[ply].in_check() && depth <= 8 && eval - rfp_margin >= beta {
             return eval - rfp_margin;
@@ -399,7 +399,7 @@ impl Thread {
 
         let (try_probcut_beta, try_probcut_alpha, a, b, sigma, s) = match depth {
             1 => (true, true, 1.033_601_6, 5.614_562, 56.246_075, 0),
-            2 => (true, false, 1.039_230_8, 8.608_924, 65.645_85, 0),
+            2 => (true, corr < 16, 1.039_230_8, 8.608_924, 65.645_85, 0),
             3 => (true, false, 1.070297780461222, 4.639024021079546, 76.79108090708215, 0),
             4 => (true, false, 1.041_830_2, 1.444_724_8, 66.839_806, 1),
             //8 => (true, 1.0417771,   1.3685266,  94.86876, 4),
