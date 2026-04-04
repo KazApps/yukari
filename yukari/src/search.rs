@@ -422,7 +422,7 @@ impl Thread {
             _ => (false, false, 0.0, 0.0, 0.0, 0),
         };
         if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta && tt_complexity <= 200 {
-            let bound = ((beta as f32 + sigma - b) / a).round() as i32;
+            let bound = ((beta as f32 + sigma + tt_complexity as f32 / 32.0 - b) / a).round() as i32;
             let score = self.search(s, bound - 1, bound, ply, tt);
             if score >= bound {
                 return beta;
@@ -430,7 +430,7 @@ impl Thread {
         }
 
         if !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha && tt_complexity <= 200 {
-            let bound = ((alpha as f32 - sigma - b) / a).round() as i32;
+            let bound = ((alpha as f32 - sigma - tt_complexity as f32 / 32.0 - b) / a).round() as i32;
             let score = self.search(s, bound, bound + 1, ply, tt);
             if score <= bound {
                 return alpha;
