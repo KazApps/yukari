@@ -438,6 +438,36 @@ impl Thread {
             return alpha;
         }
 
+        if excluded_move.is_none() {
+            self.keystack.push(self.board[ply].hash());
+        }
+
+        // Null-move pruning
+        if excluded_move.is_none() && !self.board[ply].in_check() && depth >= 5 && eval >= beta + 70 && !expected_pvnode {
+            let reduction = 3 + depth / 4;
+
+            if self.board.len() <= ply + 1 {
+                self.board.push(self.board[ply].make_null());
+            } else {
+                self.board[ply+1] = self.board[ply].make_null();
+            }
+
+            self.path.push(None);
+            let score = -self.search(
+                depth - reduction,
+                -beta,
+                -beta + 1,
+                ply + 1,
+                tt,
+                None
+            );
+            self.path.pop();
+
+            if score >= beta {
+                return score;
+            }
+        }
+
         let mut moves = {
             let tt_move = tt_entry.and_then(|e| e.m);
             let last_m = *self.path.last().unwrap_or(&None);
@@ -448,10 +478,6 @@ impl Thread {
                 .collect::<ArrayVec<[(Move, MoveOrder); 256]>>()
         };
         moves.sort_by_key(|(_, order)| *order);
-
-        if excluded_move.is_none() {
-            self.keystack.push(self.board[ply].hash());
-        }
 
         let mut best = i32::MIN;
         let mut best_move = None;
