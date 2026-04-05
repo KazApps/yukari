@@ -497,7 +497,7 @@ impl Thread {
 
                     // The TT move seems uniquely good; extend.
                     if score < singular_beta {
-                        extension = if score < singular_beta - 50 - 400 * i32::from(expected_pvnode) {
+                        extension = if score < singular_beta - 25 - 200 * i32::from(expected_pvnode) {
                             2
                         } else {
                             1
