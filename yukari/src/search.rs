@@ -492,6 +492,10 @@ impl Thread {
                     // The TT move seems uniquely good; extend.
                     if score < singular_beta {
                         extension += 1;
+
+                        if !expected_pvnode && score < singular_beta - 50 {
+                            extension += 1;
+                        }
                     }
                 }
             }
