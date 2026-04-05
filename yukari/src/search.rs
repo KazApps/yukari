@@ -499,7 +499,7 @@ impl Thread {
                     if score < singular_beta {
                         extension += 1;
                     } else if tt_entry.score as i32 >= beta {
-                        extension -= 1;
+                        extension -= 2;
                     }
                 // Low depth singular extension: Determine singularity by static eval vs alpha.
                 } else if !self.board[ply].in_check() && depth <= 7 && eval <= alpha - 25 && tt_entry.flags == TtFlags::Lower {
