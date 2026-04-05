@@ -503,7 +503,11 @@ impl Thread {
                     }
                 // Low depth singular extension: Determine singularity by static eval vs alpha.
                 } else if !self.board[ply].in_check() && depth <= 7 && eval <= alpha - 25 && tt_entry.flags == TtFlags::Lower {
-                    extension += 1;
+                    extension = if !expected_pvnode && !m.is_capture() && tt_entry.depth as i32 >= depth - 3 && eval <= alpha - 50 {
+                        2
+                    } else {
+                        1
+                    };
                 }
             }
 
