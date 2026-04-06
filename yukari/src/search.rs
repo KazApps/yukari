@@ -500,7 +500,11 @@ impl Thread {
 
                     // The TT move seems uniquely good; extend.
                     if score < singular_beta {
-                        extension += 1;
+                        if expected_pvnode || score >= singular_beta - 50 {
+                            extension += 1;
+                        } else {
+                            extension += 2;
+                        }
                     } else if tt_entry.score as i32 >= beta {
                         extension -= 1;
                     }
