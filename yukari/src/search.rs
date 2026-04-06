@@ -636,7 +636,7 @@ impl Thread {
                 && ply > 0
                 && Some(*m) == tt_entry.m
             {
-                if depth >= 7 && matches!(tt_entry.flags, TtFlags::Exact | TtFlags::Lower) && tt_entry.score.abs() < 9500 {
+                if depth >= 7 && i32::from(tt_entry.depth) >= depth - 2 && matches!(tt_entry.flags, TtFlags::Exact | TtFlags::Lower) && tt_entry.score.abs() < 9500 {
                     let singular_beta = (i32::from(tt_entry.score) - depth * 2).max(-MATE_VALUE + 1);
                     let singular_depth = (depth - 1) / 2;
                     let score = self.search(singular_depth, singular_beta - 1, singular_beta, ply, tt, Some(*m));
@@ -649,7 +649,11 @@ impl Thread {
 
                     // The TT move seems uniquely good; extend.
                     if score < singular_beta {
-                        extension += 1;
+                        if !expected_pvnode && score < singular_beta - 20 {
+                            extension += 2;
+                        } else {
+                            extension += 1;
+                        }
                     } else if tt_entry.score as i32 >= beta {
                         extension -= 1;
                     }
