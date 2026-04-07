@@ -408,6 +408,7 @@ impl Thread {
             3 => (true, false, 1.067_644_7, 1.667_016_3, 75.316_055, 0), // R² = 0.951649
             4 => (true, false, 1.033_658_9, 0.810_709_7, 63.553_913, 1), // R² = 0.966171
             5 => (true, false, 1.059_259, -3.001_881, 68.158_165, 1), // R² = 0.963068
+            6 => (true, false, 1.039_571_1, 2.921_948_8, 48.398_846_8, 3), // R² = 0.981852
             _ => (false, false, 0.0, 0.0, 0.0, 0),
         };
         if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta {
