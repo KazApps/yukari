@@ -402,17 +402,17 @@ impl Thread {
             }
         }
 
-        let piece_count = self.board[ply].data().piecemask().occupied().count_ones() as usize;
+        let piece_count = (self.board[ply].data().piecemask().occupied().count_ones() - 2) as f32 / 4.0;
         let (try_probcut_beta, try_probcut_alpha, a, b, c, sigma, s) = match depth {
-            1 => (true, true, 1.0341710, 3.5425575, 0.0391757, 55.3639940, 0), // R² = 0.971152
-            2 => (true, false, 1.0370859, 7.3784262, -0.0552763, 62.9729874, 0), // R² = 0.963188
-            3 => (true, false, 1.0656531, 0.5173048, 0.0612143, 74.7394341, 0), // R² = 0.951490
-            4 => (true, false, 1.0322347, 1.5940717, -0.0529226, 62.9436772, 1), // R² = 0.966183
-            5 => (true, false, 1.0569562, -4.0401444, 0.0551198, 67.3199122, 1), // R² = 0.963222
+            1 => (true, true, 1.0341710, 3.6209090, 0.1567029, 55.3639940, 0), // R² = 0.971152
+            2 => (true, false, 1.0370859, 7.2678736, -0.2211051, 62.9729874, 0), // R² = 0.963188
+            3 => (true, false, 1.0656531, 0.6397333, 0.2448570, 74.7394341, 0), // R² = 0.951490
+            4 => (true, false, 1.0322347, 1.4882264, -0.2116905, 62.9436772, 1), // R² = 0.966183
+            5 => (true, false, 1.0569562, -3.9299048, 0.2204792, 67.3199122, 1), // R² = 0.963222
             _ => (false, false, 0.0, 0.0, 0.0, 0.0, 0),
         };
         if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta {
-            let bound = ((beta as f32 + sigma - (b + c * piece_count as f32)) / a).round() as i32;
+            let bound = ((beta as f32 + sigma - (b + c * piece_count)) / a).round() as i32;
             let score = self.search(s, bound - 1, bound, ply, tt, None);
             if score >= bound {
                 return beta;
@@ -420,7 +420,7 @@ impl Thread {
         }
 
         if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha {
-            let bound = ((alpha as f32 - sigma - (b + c * piece_count as f32)) / a).round() as i32;
+            let bound = ((alpha as f32 - sigma - (b + c * piece_count)) / a).round() as i32;
             let score = self.search(s, bound, bound + 1, ply, tt, None);
             if score <= bound {
                 return alpha;
