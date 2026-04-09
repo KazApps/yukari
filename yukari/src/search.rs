@@ -412,6 +412,8 @@ impl Thread {
             }
         }
 
+        let tt_capture = tt_entry.and_then(|entry| entry.m).map_or(false, |m| m.is_capture());
+
         let piece_count = (self.board[ply].data().piecemask().occupied().count_ones() as usize - 2) / 8;
         let (try_probcut_beta, try_probcut_alpha, a, b, sigma, s) = match (depth, piece_count) {
             (1, 0) => (true, true, 1.0252869, 15.1492064, 51.0520368, 0), // R² = 0.970577
@@ -436,7 +438,7 @@ impl Thread {
             (5, 3) => (true, false, 1.0378744, -5.2181850, 52.2774548, 1), // R² = 0.966565
             _ => (false, false, 0.0, 0.0, 0.0, 0),
         };
-        if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta {
+        if excluded_move.is_none() && !self.board[ply].in_check() && !tt_capture && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta {
             let bound = ((beta as f32 + sigma - b) / a).round() as i32;
             let score = self.search(s, bound - 1, bound, ply, tt, None);
             if score >= bound {
@@ -444,7 +446,7 @@ impl Thread {
             }
         }
 
-        if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha {
+        if excluded_move.is_none() && !self.board[ply].in_check() && !tt_capture && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha {
             let bound = ((alpha as f32 - sigma - b) / a).round() as i32;
             let score = self.search(s, bound, bound + 1, ply, tt, None);
             if score <= bound {
