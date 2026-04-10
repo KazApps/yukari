@@ -46,12 +46,13 @@ pub struct Yukari {
     search: Search,
     threads: usize,
     hash_megabytes: usize,
+    minimal: bool,
 }
 
 impl Yukari {
     /// Create a new copy of the engine, starting with the typical position and unused time controls
     #[must_use]
-    pub fn new(threads: usize, hash_megabytes: usize) -> Self {
+    pub fn new(threads: usize, hash_megabytes: usize, minimal: bool) -> Self {
         let mut this = Self {
             // Using startpos fixes knights
             board: Board::startpos(),
@@ -65,6 +66,7 @@ impl Yukari {
             search: Search::new(threads),
             threads,
             hash_megabytes,
+            minimal,
         };
         this.search.allocate_tt(hash_megabytes);
         this
@@ -160,22 +162,41 @@ impl Yukari {
 
                 if score <= alpha {
                     lower_margin *= 2;
-                    output.complete(
-                        &self.board,
-                        depth,
-                        self.search.seldepth(),
-                        score,
-                        Instant::now().duration_since(start),
-                        self.search.nodes() + self.search.qnodes(),
-                        &pv,
-                        false,
-                        false,
-                    );
+                    if !self.minimal {
+                        output.complete(
+                            &self.board,
+                            depth,
+                            self.search.seldepth(),
+                            score,
+                            Instant::now().duration_since(start),
+                            self.search.nodes() + self.search.qnodes(),
+                            &pv,
+                            false,
+                            false,
+                        );
+                    }
                     continue;
                 }
 
                 if score >= beta {
                     upper_margin *= 2;
+                    if !self.minimal {
+                        output.complete(
+                            &self.board,
+                            depth,
+                            self.search.seldepth(),
+                            score,
+                            Instant::now().duration_since(start),
+                            self.search.nodes() + self.search.qnodes(),
+                            &pv,
+                            false,
+                            true,
+                        );
+                    }
+                    continue;
+                }
+
+                if !self.minimal {
                     output.complete(
                         &self.board,
                         depth,
@@ -184,23 +205,10 @@ impl Yukari {
                         Instant::now().duration_since(start),
                         self.search.nodes() + self.search.qnodes(),
                         &pv,
-                        false,
                         true,
+                        false,
                     );
-                    continue;
                 }
-
-                output.complete(
-                    &self.board,
-                    depth,
-                    self.search.seldepth(),
-                    score,
-                    Instant::now().duration_since(start),
-                    self.search.nodes() + self.search.qnodes(),
-                    &pv,
-                    true,
-                    false,
-                );
                 break;
             }
 
@@ -419,7 +427,7 @@ const YUKARI: &str = "
 ";
 
 fn run() -> io::Result<()> {
-    let mut engine = Yukari::new(1, 16);
+    let mut engine = Yukari::new(1, 16, false);
     let mut protocol = Protocol::Human;
 
     for arg in std::env::args() {
@@ -480,6 +488,7 @@ fn run() -> io::Result<()> {
                 println!("id author Hannah Ravensloft");
                 println!("option name Hash type spin default 16 min 1 max 8192");
                 println!("option name Threads type spin default 1 min 1 max 256"); // do we even have a limit?
+                println!("option name Minimal type check default false");
                 println!("uciok");
             }
             // This is where we send our features
@@ -521,6 +530,7 @@ fn run() -> io::Result<()> {
                 println!("feature option=\"CorrhistNstmKQRBN -spin 1024 0 2048\"");
                 println!("feature option=\"Hash -spin 16 1 8192\"");
                 println!("feature option=\"Threads -spin 1 1 256\"");
+                println!("feature option=\"Minimal -check 0\"");
                 // Communicate that feature reporting is done
                 println!("feature done=1");
             }
@@ -584,7 +594,7 @@ fn run() -> io::Result<()> {
                 }
             }
             // Reset the entire state of the engine
-            "new" | "ucinewgame" => engine = Yukari::new(engine.threads, engine.hash_megabytes),
+            "new" | "ucinewgame" => engine = Yukari::new(engine.threads, engine.hash_megabytes, engine.minimal),
             // Parse our two time controls from the whole commmand lines
             // TODO: This is rather xboard specific
             "level" => engine.parse_tc(trimmed),
@@ -605,20 +615,23 @@ fn run() -> io::Result<()> {
             }
             "option" => {
                 let (name, value) = args.split_once('=').unwrap();
-                if name == "Hash" {
-                    // UCIism. grumble grumble.
-                    let value = value.parse::<i32>().unwrap();
-                    if value >= 1 {
+                let value = value.parse::<i32>().unwrap();
+                match name {
+                    "Hash" => if value >= 1 {
+                        // UCIism. grumble grumble.
                         engine.search.allocate_tt(value as usize);
                         engine.hash_megabytes = value as usize;
+                    },
+                    "Threads" => {
+                        // UCIism. grumble grumble.
+                        engine.search = Search::new(value as usize);
+                        engine.search.allocate_tt(engine.hash_megabytes);
+                        engine.threads = value as usize;
+                    },
+                    "Minimal" => {
+                        engine.minimal = value != 0;
                     }
-                }
-                if name == "Threads" {
-                    // UCIism. grumble grumble.
-                    let value = value.parse::<usize>().unwrap();
-                    engine.search = Search::new(value);
-                    engine.search.allocate_tt(engine.hash_megabytes);
-                    engine.threads = value;
+                    _ => {}
                 }
             }
             "setoption" => {
@@ -628,18 +641,25 @@ fn run() -> io::Result<()> {
                 let (value, args) = args.split_once(' ').unwrap_or((args, ""));
                 assert_eq!(value, "value");
                 let (value, _) = args.split_once(' ').unwrap_or((args, ""));
-                let value = value.parse::<i32>().unwrap();
                 match name {
-                    "Hash" if value >= 1 => {
+                    "Hash" => {
                         // UCIism. grumble grumble.
-                        engine.search.allocate_tt(value as usize);
-                        engine.hash_megabytes = value as usize;
+                        let value = value.parse::<i32>().unwrap();
+                        if value >= 1 {
+                            engine.search.allocate_tt(value as usize);
+                            engine.hash_megabytes = value as usize;
+                        }
                     } 
                     "Threads" => {
                         // UCIism, grumble grumble.
+                        let value = value.parse::<i32>().unwrap();
                         engine.search = Search::new(value as usize);
                         engine.search.allocate_tt(engine.hash_megabytes);
                         engine.threads = value as usize;
+                    },
+                    "Minimal" => {
+                        let value = value.parse::<bool>().unwrap();
+                        engine.minimal = value;
                     }
                     _ => (),
                 }
