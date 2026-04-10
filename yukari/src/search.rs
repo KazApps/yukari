@@ -380,7 +380,6 @@ impl Thread {
         }
 
         let tt_entry = self.probe_tt(tt, &self.board[ply], ply);
-        let mut eval = None;
         if let Some(entry) = tt_entry && excluded_move.is_none() && !expected_pvnode && i32::from(entry.depth) >= depth {
             let score = i32::from(entry.score);
             match entry.flags {
@@ -398,10 +397,32 @@ impl Thread {
                     }
                 }
             }
-            eval = Some(entry.eval as i32);
         }
 
-        let eval = eval.unwrap_or_else(|| self.eval(ply));
+        let eval = (!expected_pvnode)
+            .then_some(tt_entry)
+            .flatten()
+            .map(|entry| entry.eval as i32)
+            .unwrap_or_else(|| {
+                let eval = self.eval(ply);
+
+                if !expected_pvnode {
+                    self.write_tt(
+                        tt,
+                        &self.board[ply],
+                        ply,
+                        TtData {
+                            flags: Default::default(),
+                            depth: 0,
+                            score: 0,
+                            m: None,
+                            eval: eval as i16,
+                        });
+                }
+
+                eval
+            });
+
         let rfp_margin = 45 * depth;
         if excluded_move.is_none() && !self.board[ply].in_check() && depth <= 8 && eval - rfp_margin >= beta {
             return eval - rfp_margin;
