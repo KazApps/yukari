@@ -354,7 +354,7 @@ impl Thread {
             .clamp(-CORRHIST_MAX, CORRHIST_MAX);
     }
 
-    pub fn search(&mut self, depth: i32, mut alpha: i32, beta: i32, ply: usize, tt: &[TtEntry], excluded_move: Option<Move>) -> i32 {
+    pub fn search(&mut self, depth: i32, mut alpha: i32, beta: i32, ply: usize, tt: &[TtEntry], excluded_move: Option<Move>, mut probcut_failed: bool) -> i32 {
         let expected_pvnode = alpha != beta - 1;
 
         if self.pv.len() <= ply {
@@ -414,43 +414,49 @@ impl Thread {
         }
 
         let piece_count = (self.board[ply].data().piecemask().occupied().count_ones() as usize - 2) / 8;
-        let (try_probcut_beta, try_probcut_alpha, a, b, sigma, s) = match (depth, piece_count) {
-            (1, 0) => (true, true, 1.0252869, 15.1492064, 51.0, 0), // R² = 0.970577
-            (1, 1) => (true, true, 1.0507307, -4.6583063, 61.0, 0), // R² = 0.966735
-            (1, 2) => (true, true, 1.0239908, 4.8782359, 53.0, 0), // R² = 0.976098
-            (1, 3) => (true, true, 1.0193669, 12.3135830, 43.0, 0), // R² = 0.974907
-            (2, 0) => (true, false, 1.0486334, 10.3478001, 64.0, 0), // R² = 0.956634
-            (2, 1) => (true, false, 1.0457716, 5.2340788, 65.0, 0), // R² = 0.962184
-            (2, 2) => (true, false, 1.0267263, 5.7928469, 64.0, 0), // R² = 0.966356
-            (2, 3) => (true, false, 1.0298758, 6.7637442, 52.0, 0), // R² = 0.963947
-            (3, 0) => (true, false, 1.0745089, 11.6070644, 72.0, 0), // R² = 0.948300
-            (3, 1) => (true, false, 1.0860172, -5.3286865, 80.0, 0), // R² = 0.947862
-            (3, 2) => (true, false, 1.0479199, 1.2703850, 74.0, 0), // R² = 0.956360
-            (3, 3) => (true, false, 1.0431730, 8.6613251, 59.0, 0), // R² = 0.955359
-            (4, 0) => (true, false, 1.0611005, -4.5948201, 59.0, 1), // R² = 0.965931
-            (4, 1) => (true, false, 1.0320029, 7.0788128, 68.0, 1), // R² = 0.963248
-            (4, 2) => (true, false, 1.0257294, -0.7617608, 63.0, 1), // R² = 0.968831
-            (4, 3) => (true, false, 1.0265289, -5.2499137, 49.0, 1), // R² = 0.969644
-            (5, 0) => (true, false, 1.0869210, -5.5946398, 65.0, 1), // R² = 0.960879
-            (5, 1) => (true, false, 1.0656229, 0.4919780, 72.0, 1), // R² = 0.961294
-            (5, 2) => (true, false, 1.0435366, -4.2900165, 68.0, 1), // R² = 0.965553
-            (5, 3) => (true, false, 1.0378744, -5.2181850, 52.0, 1), // R² = 0.966565
+        let (try_probcut_beta, try_probcut_alpha, a, b, sigma, s) = match (depth, piece_count, probcut_failed) {
+            (1, 0, _) => (true, true, 1.0252869, 15.1492064, 51.0, 0), // R² = 0.970577
+            (1, 1, _) => (true, true, 1.0507307, -4.6583063, 61.0, 0), // R² = 0.966735
+            (1, 2, _) => (true, true, 1.0239908, 4.8782359, 53.0, 0), // R² = 0.976098
+            (1, 3, _) => (true, true, 1.0193669, 12.3135830, 43.0, 0), // R² = 0.974907
+            (2, 0, _) => (true, false, 1.0486334, 10.3478001, 64.0, 0), // R² = 0.956634
+            (2, 1, _) => (true, false, 1.0457716, 5.2340788, 65.0, 0), // R² = 0.962184
+            (2, 2, _) => (true, false, 1.0267263, 5.7928469, 64.0, 0), // R² = 0.966356
+            (2, 3, _) => (true, false, 1.0298758, 6.7637442, 52.0, 0), // R² = 0.963947
+            (3, 0, _) => (true, false, 1.0745089, 11.6070644, 72.0, 0), // R² = 0.948300
+            (3, 1, _) => (true, false, 1.0860172, -5.3286865, 80.0, 0), // R² = 0.947862
+            (3, 2, _) => (true, false, 1.0479199, 1.2703850, 74.0, 0), // R² = 0.956360
+            (3, 3, _) => (true, false, 1.0431730, 8.6613251, 59.0, 0), // R² = 0.955359
+            (4, 0, _) => (true, false, 1.0611005, -4.5948201, 59.0, 1), // R² = 0.965931
+            (4, 1, _) => (true, false, 1.0320029, 7.0788128, 68.0, 1), // R² = 0.963248
+            (4, 2, _) => (true, false, 1.0257294, -0.7617608, 63.0, 1), // R² = 0.968831
+            (4, 3, _) => (true, false, 1.0265289, -5.2499137, 49.0, 1), // R² = 0.969644
+            (5, 0, _) => (true, false, 1.0869210, -5.5946398, 65.0, 1), // R² = 0.960879
+            (5, 1, _) => (true, false, 1.0656229, 0.4919780, 72.0, 1), // R² = 0.961294
+            (5, 2, _) => (true, false, 1.0435366, -4.2900165, 68.0, 1), // R² = 0.965553
+            (5, 3, _) => (true, false, 1.0378744, -5.2181850, 52.0, 1), // R² = 0.966565
+            (6, 0, false) => (true, false, 1.1053398, -4.6542901, 71.1223365, 1), // R² = 0.955347
+            (6, 1, false) => (true, false, 1.0763030, 6.1711775, 78.7064756, 1), // R² = 0.954530
+            (6, 2, false) => (true, false, 1.0519361, -1.7843279, 73.0546423, 1), // R² = 0.960808
+            (6, 3, false) => (true, false, 1.0447290, -5.4399529, 55.7800546, 1), // R² = 0.962587
             _ => (false, false, 0.0, 0.0, 0.0, 0),
         };
         if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_beta {
             let bound = ((beta as f32 + sigma - b) / a).round() as i32;
-            let score = self.search(s, bound - 1, bound, ply, tt, None);
+            let score = self.search(s, bound - 1, bound, ply, tt, None, probcut_failed);
             if score >= bound {
                 return beta;
             }
+            probcut_failed = true;
         }
 
         if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha {
             let bound = ((alpha as f32 - sigma - b) / a).round() as i32;
-            let score = self.search(s, bound, bound + 1, ply, tt, None);
+            let score = self.search(s, bound, bound + 1, ply, tt, None, probcut_failed);
             if score <= bound {
                 return alpha;
             }
+            probcut_failed = true;
         }
 
         let mut moves = ArrayVec::new();
@@ -516,7 +522,7 @@ impl Thread {
                 if depth >= 7 && matches!(tt_entry.flags, TtFlags::Exact | TtFlags::Lower) && tt_entry.score.abs() < 9500 {
                     let singular_beta = (i32::from(tt_entry.score) - depth * 2).max(-MATE_VALUE + 1);
                     let singular_depth = (depth - 1) / 2;
-                    let score = self.search(singular_depth, singular_beta - 1, singular_beta, ply, tt, Some(*m));
+                    let score = self.search(singular_depth, singular_beta - 1, singular_beta, ply, tt, Some(*m), probcut_failed);
 
                     // Multicut: Another move failed high, so this position is very good; prune.
                     if score >= singular_beta && singular_beta >= beta {
@@ -548,7 +554,7 @@ impl Thread {
 
             let mut score;
             if movecount == 0 {
-                score = -self.search(depth - 1 + extension, -beta, -alpha, ply + 1, tt, None);
+                score = -self.search(depth - 1 + extension, -beta, -alpha, ply + 1, tt, None, probcut_failed);
             } else {
                 // Late Move Reduction
                 let mut reduction = 0;
@@ -560,9 +566,9 @@ impl Thread {
                     // credit: adam
                 }
 
-                score = -self.search(depth - 1 - reduction + extension, -alpha - 1, -alpha, ply + 1, tt, None);
+                score = -self.search(depth - 1 - reduction + extension, -alpha - 1, -alpha, ply + 1, tt, None, probcut_failed);
                 if score > alpha && score < beta {
-                    score = -self.search(depth - 1 + extension, -beta, -alpha, ply + 1, tt, None);
+                    score = -self.search(depth - 1 + extension, -beta, -alpha, ply + 1, tt, None, probcut_failed);
                 }
             }
 
@@ -717,7 +723,7 @@ impl Search {
     ) -> i32 {
         let scores = self.pool.install(|| {
             self.threads.par_iter_mut().map(|thread| {
-                thread.search(depth, alpha, beta, 0, &self.tt, None)
+                thread.search(depth, alpha, beta, 0, &self.tt, None, false)
             }).collect::<Vec<_>>()
         });
 
