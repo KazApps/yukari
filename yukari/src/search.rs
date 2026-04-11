@@ -446,7 +446,7 @@ impl Thread {
         }
 
         if excluded_move.is_none() && !self.board[ply].in_check() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && try_probcut_alpha {
-            let bound = ((alpha - sigma) as f32 / a).round() as i32;
+            let bound = ((alpha - sigma * 2) as f32 / a).round() as i32;
             let score = self.search(s, bound, bound + 1, ply, tt, None);
             if score <= bound {
                 return alpha;
