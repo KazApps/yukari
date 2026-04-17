@@ -636,7 +636,7 @@ impl Thread {
                 && ply > 0
                 && Some(*m) == tt_entry.m
             {
-                if depth >= 7 && matches!(tt_entry.flags, TtFlags::Exact | TtFlags::Lower) && tt_entry.score.abs() < 9500 {
+                if depth >= 6 && matches!(tt_entry.flags, TtFlags::Exact | TtFlags::Lower) && tt_entry.score.abs() < 9500 {
                     let singular_beta = (i32::from(tt_entry.score) - depth * 2).max(-MATE_VALUE + 1);
                     let singular_depth = (depth - 1) / 2;
                     let score = self.search(singular_depth, singular_beta - 1, singular_beta, ply, tt, Some(*m));
