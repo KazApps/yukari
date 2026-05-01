@@ -582,7 +582,7 @@ impl Thread {
                 if score >= bound {
                     return beta;
                 }
-                probcut_failed = true;
+                probcut_failed = mpc_model.s > 0;
             }
 
             if alpha >= -1000 && beta <= 1000 && !expected_pvnode && depth == 1 {
@@ -591,7 +591,7 @@ impl Thread {
                 if score <= bound {
                     return alpha;
                 }
-                probcut_failed = true;
+                probcut_failed = mpc_model.s > 0;
             }
 
             if !probcut_failed && !expected_pvnode && depth >= 2 && eval >= beta {
