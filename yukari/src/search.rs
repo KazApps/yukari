@@ -553,14 +553,14 @@ impl Thread {
         }
 
         let eval = self.eval(ply);
-        if !self.board[ply].in_check() {
+        if !self.board[ply].in_check() && excluded_move.is_none() {
             let rfp_margin = 45 * depth;
             if excluded_move.is_none() && depth <= 8 && eval - rfp_margin >= beta {
                 return eval - rfp_margin;
             }
 
             let razor_margin = 250 * depth;
-            if excluded_move.is_none() && depth == 1 && alpha.abs() < 2000 && eval + razor_margin <= alpha {
+            if depth == 1 && alpha.abs() < 2000 && eval + razor_margin <= alpha {
                 let score = self.quiesce(alpha, alpha + 1, ply, tt);
                 if score <= alpha {
                     return score;
@@ -574,38 +574,42 @@ impl Thread {
                 MpcModel { a: 0.0, sigma: 0, s: 0 }
             };
 
-            if excluded_move.is_none() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && depth <= 5 {
+            let mut probcut_failed = false;
+
+            if alpha >= -1000 && beta <= 1000 && !expected_pvnode && depth <= 5 {
                 let bound = ((beta + mpc_model.sigma) as f32 / mpc_model.a).round() as i32;
                 let score = self.search(mpc_model.s, bound - 1, bound, ply, tt, None);
                 if score >= bound {
                     return beta;
                 }
+                probcut_failed = true;
             }
 
-            if excluded_move.is_none() && alpha >= -1000 && beta <= 1000 && !expected_pvnode && depth == 1 {
+            if alpha >= -1000 && beta <= 1000 && !expected_pvnode && depth == 1 {
                 let bound = ((alpha - mpc_model.sigma) as f32 / mpc_model.a).round() as i32;
                 let score = self.search(mpc_model.s, bound, bound + 1, ply, tt, None);
                 if score <= bound {
                     return alpha;
                 }
+                probcut_failed = true;
             }
-        }
 
-        if excluded_move.is_none() && !expected_pvnode && !self.board[ply].in_check() && depth >= 2 && eval >= beta {
-            self.keystack.push(self.board[ply].hash());
-            if self.board.len() <= ply + 1 {
-                self.board.push(self.board[ply].make_null());
-            } else {
-                self.board[ply + 1] = self.board[ply].make_null();
-            }
-            self.path.push(None);
-            let reduction = 3;
-            let score = -self.search(depth - 1 - reduction, -beta, -beta + 1, ply + 1, tt, None);
-            self.path.pop();
-            self.keystack.pop();
+            if !probcut_failed && !expected_pvnode && depth >= 2 && eval >= beta {
+                self.keystack.push(self.board[ply].hash());
+                if self.board.len() <= ply + 1 {
+                    self.board.push(self.board[ply].make_null());
+                } else {
+                    self.board[ply + 1] = self.board[ply].make_null();
+                }
+                self.path.push(None);
+                let reduction = 3;
+                let score = -self.search(depth - 1 - reduction, -beta, -beta + 1, ply + 1, tt, None);
+                self.path.pop();
+                self.keystack.pop();
 
-            if score >= beta {
-                return score;
+                if score >= beta {
+                    return score;
+                }
             }
         }
 
