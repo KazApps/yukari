@@ -185,38 +185,38 @@ impl Default for SearchParams {
             mpc_model: [
                 [
                     // depth: 1
-                    MpcModel { a: 1.039, sigma: 22, s: 0 },
-                    MpcModel { a: 1.056, sigma: 47, s: 0 },
-                    MpcModel { a: 1.019, sigma: 42, s: 0 },
-                    MpcModel { a: 1.018, sigma: 24, s: 0 },
+                    MpcModel { a: 1.035, sigma: 38, s: 0 },
+                    MpcModel { a: 1.043, sigma: 45, s: 0 },
+                    MpcModel { a: 1.024, sigma: 47, s: 0 },
+                    MpcModel { a: 1.023, sigma: 34, s: 0 },
                 ],
                 [
                     // depth: 2
-                    MpcModel { a: 1.043, sigma: 48, s: 0 },
-                    MpcModel { a: 1.049, sigma: 68, s: 0 },
-                    MpcModel { a: 1.026, sigma: 47, s: 0 },
-                    MpcModel { a: 1.035, sigma: 36, s: 0 },
+                    MpcModel { a: 1.067, sigma: 53, s: 0 },
+                    MpcModel { a: 1.066, sigma: 61, s: 0 },
+                    MpcModel { a: 1.043, sigma: 66, s: 0 },
+                    MpcModel { a: 1.041, sigma: 53, s: 0 },
                 ],
                 [
                     // depth: 3
-                    MpcModel { a: 1.067, sigma: 74, s: 0 },
-                    MpcModel { a: 1.092, sigma: 81, s: 0 },
-                    MpcModel { a: 1.048, sigma: 69, s: 0 },
-                    MpcModel { a: 1.054, sigma: 55, s: 0 },
+                    MpcModel { a: 1.091, sigma: 60, s: 0 },
+                    MpcModel { a: 1.092, sigma: 70, s: 0 },
+                    MpcModel { a: 1.057, sigma: 75, s: 0 },
+                    MpcModel { a: 1.052, sigma: 56, s: 0 },
                 ],
                 [
                     // depth: 4
-                    MpcModel { a: 1.065, sigma: 65, s: 1 },
-                    MpcModel { a: 1.028, sigma: 76, s: 1 },
-                    MpcModel { a: 1.023, sigma: 71, s: 1 },
-                    MpcModel { a: 1.033, sigma: 56, s: 1 },
+                    MpcModel { a: 1.074, sigma: 58, s: 1 },
+                    MpcModel { a: 1.062, sigma: 66, s: 1 },
+                    MpcModel { a: 1.043, sigma: 71, s: 1 },
+                    MpcModel { a: 1.036, sigma: 61, s: 1 },
                 ],
                 [
                     // depth: 5
-                    MpcModel { a: 1.088, sigma: 62, s: 1 },
-                    MpcModel { a: 1.055, sigma: 71, s: 1 },
-                    MpcModel { a: 1.050, sigma: 86, s: 1 },
-                    MpcModel { a: 1.035, sigma: 61, s: 1 },
+                    MpcModel { a: 1.099, sigma: 64, s: 1 },
+                    MpcModel { a: 1.085, sigma: 73, s: 1 },
+                    MpcModel { a: 1.056, sigma: 77, s: 1 },
+                    MpcModel { a: 1.046, sigma: 64, s: 1 },
                 ],
             ],
         }
