@@ -477,7 +477,7 @@ impl Thread {
             }
         }
 
-        if excluded_move.is_none() && !expected_pvnode && !self.board[ply].in_check() && depth >= 8 && eval >= beta {
+        if excluded_move.is_none() && !expected_pvnode && !self.board[ply].in_check() && depth >= 8 && eval >= beta && eval < 1500 {
             let reduction = depth / 2;
             let bound = beta + 80 + depth * 5;
             let score = self.search(depth - 1 - reduction, bound - 1, bound, ply, tt, None);
